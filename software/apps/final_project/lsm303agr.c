@@ -49,7 +49,7 @@ static void i2c_reg_write(uint8_t i2c_addr, uint8_t reg_addr, uint8_t data) {
 // i2c - pointer to already initialized and enabled twim instance
 void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   i2c_manager = i2c;
-
+  /*
   // ---Initialize Accelerometer---
 
   // Reboot acclerometer
@@ -63,14 +63,25 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   // Configure accelerometer at 100Hz, normal mode (10-bit)
   // Enable x, y and z axes
   i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_CTRL_REG1, 0x57);
+  */
 
   // Read WHO AM I register
   // Always returns the same value if working
-  uint8_t result = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_WHO_AM_I_REG);
+  uint8_t result = i2c_reg_read(ICM20948_ADDRESS, ICM20948_WHO_AM_I);
   //TODO: check the result of the Accelerometer WHO AM I register
-  printf("Accelerometer WHO AM I: %x\n", result);
+  printf("WHO AM I: %x\n", result);
+
+  // Power management reset
+  //uint8_t power_mgmt_1 = i2c_reg_read(ICM20948_ADDRESS, PWR_MGMT_1);
+  //printf("Power management 1: %x\n", power_mgmt_1);
+  
+  i2c_reg_write(ICM20948_ADDRESS, PWR_MGMT_1, 0x01);
+  nrf_delay_ms(100);
+  
+
   // ---Initialize Magnetometer---
 
+  /*
   // Reboot magnetometer
   i2c_reg_write(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_CFG_REG_A, 0x40);
   nrf_delay_ms(100); // needs delay to wait for reboot
@@ -81,16 +92,48 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
 
   // Configure magnetometer at 100Hz, continuous mode
   i2c_reg_write(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_CFG_REG_A, 0x0C);
-
+  
   // Read WHO AM I register
   result = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_WHO_AM_I_REG);
   //TODO: check the result of the Magnetometer WHO AM I register
   printf("Magnetometer WHO AM I: %x\n", result);
-
+  */
   // ---Initialize Temperature---
 
   // Enable temperature sensor
-  i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_TEMP_CFG_REG, 0xC0);
+  // i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_TEMP_CFG_REG, 0xC0);
+}
+
+// Read accelerometer data from ICM20948
+lsm303agr_measurement_t icm20948_read_accelerometer(void) {
+  const float scaling_factor = 0.00006103515625; // 1/2^14
+
+  uint16_t lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_L);
+  uint16_t msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_H);
+  //printf("LSB: %x\n", lsb);
+  //printf("MSB: %x\n", msb);
+  float x = scaling_factor*(float)(combine_bytes(lsb,msb));
+
+  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_L);
+  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_H);
+
+  float y = scaling_factor*(float)(combine_bytes(lsb,msb));
+
+  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_L);
+  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_H);
+
+  float z = scaling_factor*(float)(combine_bytes(lsb,msb));
+
+  lsm303agr_measurement_t measurement = {
+    .x_axis = x,
+    .y_axis = y,
+    .z_axis = z
+  };
+  return measurement;
+}
+
+int16_t combine_bytes(uint8_t lsb, uint8_t msb) {
+  return (uint16_t)lsb | ((uint16_t)msb << 8);
 }
 
 // Read the internal temperature sensor
@@ -109,12 +152,11 @@ float lsm303agr_read_temperature(void) {
 void temp_timer_callback(void * p_context) {
   //float temp = lsm303agr_read_temperature();
   //printf("Temperature: %f\n", temp);
-  lsm303agr_measurement_t acc_measurement = lsm303agr_read_accelerometer();
-  lsm303agr_measurement_t mag_measurement = lsm303agr_read_magnetometer();
-  //printf("Accelerometer: %f g, %f g, %f g\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
+  lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
+  printf("Accelerometer: %f g, %f g, %f g\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
   //printf("Magnetometer: %f Gs, %f Gs, %f Gs\n", mag_measurement.x_axis, mag_measurement.y_axis, mag_measurement.z_axis);
-  float phi = convert_accelerometer_to_tilt_angles(acc_measurement);
-  printf("Phi: %f\n", phi);
+  //float phi = convert_accelerometer_to_tilt_angles(acc_measurement);
+  //printf("Phi: %f\n", phi);
   //printf("Accelerometer: %x, %x, %x\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
 }
 

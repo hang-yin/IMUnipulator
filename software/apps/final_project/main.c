@@ -24,8 +24,10 @@ int main(void) {
 
   // Initialize I2C peripheral and driver
   nrf_drv_twi_config_t i2c_config = NRF_DRV_TWI_DEFAULT_CONFIG;
-  i2c_config.scl = I2C_SCL;
-  i2c_config.sda = I2C_SDA;
+  //i2c_config.scl = I2C_SCL;
+  //i2c_config.sda = I2C_SDA;
+  i2c_config.scl = EDGE_P19;
+  i2c_config.sda = EDGE_P20;
   i2c_config.frequency = NRF_TWIM_FREQ_100K;
   i2c_config.interrupt_priority = 0;
   nrf_twi_mngr_init(&twi_mngr_instance, &i2c_config);
@@ -34,9 +36,11 @@ int main(void) {
   lsm303agr_init(&twi_mngr_instance);
 
   //TODO: implement me!
+
   app_timer_init();
   app_timer_create(&lab5_timer, APP_TIMER_MODE_REPEATED, temp_timer_callback);
   app_timer_start(lab5_timer, APP_TIMER_TICKS(1000), NULL);
+
 
   // Loop forever
   while (1) {
