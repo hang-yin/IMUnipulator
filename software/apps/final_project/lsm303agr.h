@@ -8,6 +8,7 @@
 static const uint8_t LSM303AGR_ACC_ADDRESS = 0x19;
 static const uint8_t LSM303AGR_MAG_ADDRESS = 0x1E;
 static const uint8_t ICM20948_ADDRESS = 0x69;
+static const uint8_t PCA9685_ADDRESS = 0x40;
 
 // Measurement data type
 typedef struct {
@@ -15,6 +16,29 @@ typedef struct {
   float y_axis;
   float z_axis;
 } lsm303agr_measurement_t;
+
+// Register definitions for PCA9685
+typedef enum {
+    LED0_ON_L = 0x06,
+    LED0_ON_H = 0x07,
+    LED0_OFF_L = 0x08,
+    LED0_OFF_H = 0x09,
+    LED1_ON_L = 0x0A,
+    LED1_ON_H = 0x0B,
+    LED1_OFF_L = 0x0C,
+    LED1_OFF_H = 0x0D,
+    LED2_ON_L = 0x0E,
+    LED2_ON_H = 0x0F,
+    LED2_OFF_L = 0x10,
+    LED2_OFF_H = 0x11,
+    PCA_PRESCALE = 0xFE,
+    PCA_MODE1 = 0x00,
+    PCA_MODE2 = 0x01,
+    PCA_ALL_LED_ON_L = 0xFA,
+    PCA_ALL_LED_ON_H = 0xFB,
+    PCA_ALL_LED_OFF_L = 0xFC,
+    PCA_ALL_LED_OFF_H = 0xFD,
+} pca9685_reg_t;
 
 // Register definitions for ICM20948
 typedef enum {
@@ -125,8 +149,12 @@ lsm303agr_measurement_t lsm303agr_read_accelerometer(void);
 // Return measurements as floating point values in uT
 lsm303agr_measurement_t lsm303agr_read_magnetometer(void);
 
-float convert_accelerometer_to_tilt_angles(lsm303agr_measurement_t acc_measurement);
+lsm303agr_measurement_t convert_accelerometer_to_tilt_angles(lsm303agr_measurement_t acc_measurement);
 
 // OUT NEW FUNCTION HEADERS
 lsm303agr_measurement_t icm20948_read_accelerometer(void);
 int16_t combine_bytes(uint8_t lsb, uint8_t msb);
+
+void set_pca9685_pwm_freq(uint16_t freq);
+void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off);
+void set_duty_cycle(uint8_t channel, float duty_cycle);

@@ -13,6 +13,7 @@
 
 // Pointer to an initialized I2C instance to use for transactions
 static const nrf_twi_mngr_t* i2c_manager = NULL;
+uint8_t state = 0;
 // Helper function to perform a 1-byte I2C read of a given register
 //
 // i2c_addr - address of the device to read from
@@ -77,6 +78,12 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   
   i2c_reg_write(ICM20948_ADDRESS, PWR_MGMT_1, 0x01);
   nrf_delay_ms(100);
+
+  // Setup PCA9685
+  
+
+  // Set PWM frequency to 1.6kHz
+  set_pca9685_pwm_freq(1600);
   
 
   // ---Initialize Magnetometer---
@@ -152,10 +159,37 @@ float lsm303agr_read_temperature(void) {
 void temp_timer_callback(void * p_context) {
   //float temp = lsm303agr_read_temperature();
   //printf("Temperature: %f\n", temp);
-  lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
-  printf("Accelerometer: %f g, %f g, %f g\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
+
+  // Accelerometer code
+  //lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
+  //printf("Accelerometer: %f g, %f g, %f g\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
   //printf("Magnetometer: %f Gs, %f Gs, %f Gs\n", mag_measurement.x_axis, mag_measurement.y_axis, mag_measurement.z_axis);
-  //float phi = convert_accelerometer_to_tilt_angles(acc_measurement);
+  //lsm303agr_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
+  //printf("Tilt: %f degrees, %f degrees, %f degrees\n", result.x_axis, result.y_axis, result.z_axis);
+
+  // Motor board code
+  // set_pca9685_pwm(0, 4095, 0);
+  // set duty cycle to 0.5 half of the time and 1 the other half
+
+  // if (state == 0){
+  //   set_duty_cycle(0, 0.5);
+  //   state = 1;
+  // } else {
+  //   set_duty_cycle(0, 1);
+  //   state = 0;
+  // }
+  // count from 0 to 10 to control pwm cycle
+  if (state == 10){
+    state = 0;
+    set_duty_cycle(0, 0);
+  } else {
+    state++;
+    set_duty_cycle(0, (float)state/10.0);
+  }
+  //set_duty_cycle(0, 0.1);
+
+
+  //printf("Tilt: %f, %f, %f\n", tilt_array[0], tilt_array[1], tilt_array[2]);
   //printf("Phi: %f\n", phi);
   //printf("Accelerometer: %x, %x, %x\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
 }
@@ -222,12 +256,72 @@ lsm303agr_measurement_t lsm303agr_read_magnetometer(void) {
 }
 
 // define a function for converting accelerometer data to tilt angles
-float convert_accelerometer_to_tilt_angles(lsm303agr_measurement_t acc_measurement) {
+lsm303agr_measurement_t convert_accelerometer_to_tilt_angles(lsm303agr_measurement_t acc_measurement) {
   double pow_x = acc_measurement.x_axis * acc_measurement.x_axis;
   double pow_y = acc_measurement.y_axis * acc_measurement.y_axis;
+  double pow_z = acc_measurement.z_axis * acc_measurement.z_axis;
+
   float temp = sqrt(pow_x + pow_y) / acc_measurement.z_axis;
   float phi = atan(temp);
+  temp = acc_measurement.y_axis / sqrt(pow_x + pow_z);
+  float theta = atan(temp);
+  temp = acc_measurement.x_axis / sqrt(pow_y + pow_z);
+  float psi = atan(temp);
   // convert phi to degrees
   float phi_degrees = phi/3.14159 * 180;
-  return phi_degrees;
+  // convert theta to degrees
+  float theta_degrees = theta/3.14159 * 180;
+  // convert psi to degrees
+  float psi_degrees = psi/3.14159 * 180;
+  return (lsm303agr_measurement_t){phi_degrees, theta_degrees, psi_degrees};
+  //return phi_degrees;
 }
+
+void set_pca9685_pwm_freq(uint16_t freq) {
+  uint16_t prescale = (25000000 / (4096 * freq)) - 1;
+  // uint8_t old_mode = i2c_reg_read(PCA9685_ADDRESS, PCA9685_MODE1);
+  // uint8_t new_mode = (old_mode & 0x7F) | 0x10;
+
+  uint8_t mode1 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE1);
+  // print old_mode
+  printf("mode1: %x\n", mode1);
+  uint8_t mode2 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE2);
+  // print old_mode2
+  printf("mode2: %x\n", mode2);
+
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x10);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_PRESCALE, prescale);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x80);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE2, 0x04);
+}
+
+void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
+  on = on & 0x0FFF;
+  off = off & 0x0FFF;
+  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_L + 4 * channel, off & 0xff);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_H + 4 * channel, off >> 8);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_L + 4 * channel, on & 0xff);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_H + 4 * channel, on >> 8);
+}
+
+void set_duty_cycle(uint8_t channel, float duty_cycle) {
+  uint16_t on = (uint16_t)(4095.0 * duty_cycle);
+  printf("on: %d\n", on);
+  uint16_t off = 4095 - on;
+  printf("off: %d\n", off);
+  set_pca9685_pwm(channel, on, off);
+}
+/*
+void set_servo_angle(uint8_t channel, float angle) {
+  uint8_t on = 0;
+  uint8_t off = 0;
+  if (angle < 0) {
+    angle = 0;
+  }
+  if (angle > 180) {
+    angle = 180;
+  }
+  off = (angle / 180.0) * 4096;
+  set_pca9685_pwm(channel, on, off);
+}
+*/
