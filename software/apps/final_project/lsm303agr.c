@@ -13,7 +13,8 @@
 
 // Pointer to an initialized I2C instance to use for transactions
 static const nrf_twi_mngr_t* i2c_manager = NULL;
-uint8_t state = 0;
+int8_t state = 0;
+int8_t direction = 1;
 // Helper function to perform a 1-byte I2C read of a given register
 //
 // i2c_addr - address of the device to read from
@@ -70,7 +71,7 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   // Always returns the same value if working
   uint8_t result = i2c_reg_read(ICM20948_ADDRESS, ICM20948_WHO_AM_I);
   //TODO: check the result of the Accelerometer WHO AM I register
-  printf("WHO AM I: %x\n", result);
+  printf("ICM20948 WHO AM I: %x\n", result);
 
   // Power management reset
   //uint8_t power_mgmt_1 = i2c_reg_read(ICM20948_ADDRESS, PWR_MGMT_1);
@@ -82,8 +83,8 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   // Setup PCA9685
   
 
-  // Set PWM frequency to 1.6kHz
-  set_pca9685_pwm_freq(1600);
+  // Set PWM frequency to 50Hz
+  set_pca9685_pwm_freq(50);
   
 
   // ---Initialize Magnetometer---
@@ -167,31 +168,24 @@ void temp_timer_callback(void * p_context) {
   //lsm303agr_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
   //printf("Tilt: %f degrees, %f degrees, %f degrees\n", result.x_axis, result.y_axis, result.z_axis);
 
-  // Motor board code
-  // set_pca9685_pwm(0, 4095, 0);
-  // set duty cycle to 0.5 half of the time and 1 the other half
-
-  // if (state == 0){
-  //   set_duty_cycle(0, 0.5);
-  //   state = 1;
-  // } else {
-  //   set_duty_cycle(0, 1);
-  //   state = 0;
-  // }
-  // count from 0 to 10 to control pwm cycle
-  if (state == 10){
-    state = 0;
-    set_duty_cycle(0, 0);
-  } else {
-    state++;
-    set_duty_cycle(0, (float)state/10.0);
-  }
-  //set_duty_cycle(0, 0.1);
-
-
   //printf("Tilt: %f, %f, %f\n", tilt_array[0], tilt_array[1], tilt_array[2]);
   //printf("Phi: %f\n", phi);
   //printf("Accelerometer: %x, %x, %x\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
+
+
+  float angle = (float)(state*45);
+  printf("Angle: %f\n", angle);
+
+  if (angle >= 180) {
+    direction = -1;
+  } else if (angle <= 0) {
+    direction = 1;
+  }
+
+  set_mg996r_angle(0,angle);
+  set_ds3218_angle(1,angle);
+
+  state += direction;
 }
 
 lsm303agr_measurement_t lsm303agr_read_accelerometer(void) {
@@ -306,22 +300,78 @@ void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
 
 void set_duty_cycle(uint8_t channel, float duty_cycle) {
   uint16_t on = (uint16_t)(4095.0 * duty_cycle);
-  printf("on: %d\n", on);
+  // printf("on: %d\n", on);
   uint16_t off = 4095 - on;
-  printf("off: %d\n", off);
+  // printf("off: %d\n", off);
   set_pca9685_pwm(channel, on, off);
 }
-/*
-void set_servo_angle(uint8_t channel, float angle) {
-  uint8_t on = 0;
-  uint8_t off = 0;
-  if (angle < 0) {
-    angle = 0;
-  }
-  if (angle > 180) {
-    angle = 180;
-  }
-  off = (angle / 180.0) * 4096;
-  set_pca9685_pwm(channel, on, off);
+
+float linear_interpolate(float x,float x1,float y1,float x2, float y2) {
+  return y1 + (x - x1)*(y2 - y1) / (x2 - x1);
 }
-*/
+
+void set_mg996r_angle(uint8_t channel, float angle) {
+  //MG996R
+  //0 deg = 0.0145
+  //30 deg = 0.0185
+  //45 deg = 0.0225
+  //60 deg = 0.028
+  //90 deg = 0.035
+  //120 deg = 0.04
+  //135 deg = 0.044
+  //150 deg = 0.051
+  //180 deg = 0.055
+  
+  float duty_cycle;
+  int i;
+  float angles[9] = {0,30,45,60,90,120,135,150,180};
+  float duty_cycles[9] = {0.0145, 0.0185, 0.0225, 0.028, 0.035, 0.04, 0.044, 0.051, 0.055};
+
+  if (angle <= 0) {
+    duty_cycle = duty_cycles[0];
+  } else if (angle >= 185) {
+    duty_cycle = duty_cycles[9];
+  } else {
+    for (i = 1; i <= 9; i++) {
+      if (angle <= angles[i]) {
+        duty_cycle = linear_interpolate(angle, angles[i-1], duty_cycles[i-1], angles[i], duty_cycles[i]);
+        break;
+      }
+    }
+  }
+
+  set_duty_cycle(channel, duty_cycle);
+}
+
+void set_ds3218_angle(uint8_t channel, float angle) {
+  //DS3218
+  //0 deg = 0.015
+  //30 deg = 0.021
+  //45 deg = 0.025
+  //60 deg = 0.0325
+  //90 deg = 0.04
+  //120 deg = 0.0475
+  //135 deg = 0.0525
+  //150 deg = 0.059
+  //180 deg = 0.0635
+  
+  float duty_cycle;
+  int i;
+  float angles[9] = {0,30,45,60,90,120,135,150,180};
+  float duty_cycles[9] = {0.015, 0.021, 0.025, 0.0325, 0.04, 0.0475, 0.0525, 0.059, 0.0635};
+
+  if (angle <= 0) {
+    duty_cycle = duty_cycles[0];
+  } else if (angle >= 181) {
+    duty_cycle = duty_cycles[9];
+  } else {
+    for (i = 1; i <= 9; i++) {
+      if (angle <= angles[i]) {
+        duty_cycle = linear_interpolate(angle, angles[i-1], duty_cycles[i-1], angles[i], duty_cycles[i]);
+        break;
+      }
+    }
+  }
+
+  set_duty_cycle(channel, duty_cycle);
+}
