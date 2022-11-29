@@ -5,16 +5,23 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <math.h>
 
 #include "lsm303agr.h"
 #include "nrf_delay.h"
+#include "nrfx_saadc.h"
 #include "app_timer.h"
+#include "microbit_v2.h"
+
+#define CAPACITIVE EDGE_P16
 
 // Pointer to an initialized I2C instance to use for transactions
 static const nrf_twi_mngr_t* i2c_manager = NULL;
 int8_t state = 0;
 int8_t direction = 1;
+float base = 90.0;
+float arm = 90.0;
 // Helper function to perform a 1-byte I2C read of a given register
 //
 // i2c_addr - address of the device to read from
@@ -85,6 +92,9 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
 
   // Set PWM frequency to 50Hz
   set_pca9685_pwm_freq(50);
+
+  // gpio init
+  nrf_gpio_pin_dir_set(CAPACITIVE, NRF_GPIO_PIN_DIR_INPUT);
   
 
   // ---Initialize Magnetometer---
@@ -162,17 +172,63 @@ void temp_timer_callback(void * p_context) {
   //printf("Temperature: %f\n", temp);
 
   // Accelerometer code
-  //lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
+  lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
   //printf("Accelerometer: %f g, %f g, %f g\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
   //printf("Magnetometer: %f Gs, %f Gs, %f Gs\n", mag_measurement.x_axis, mag_measurement.y_axis, mag_measurement.z_axis);
-  //lsm303agr_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
+  lsm303agr_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
   //printf("Tilt: %f degrees, %f degrees, %f degrees\n", result.x_axis, result.y_axis, result.z_axis);
+  // printf("Capacitive: %ld\n", nrf_gpio_pin_read(CAPACITIVE));
+  uint16_t capacitive = nrf_gpio_pin_read(CAPACITIVE);
+  if (capacitive == 1) {
+    arm = 90.0;
+    base = 90.0;
+    set_mg996r_angle(0,arm);
+    set_mg996r_angle(1,base);
+    return;
+  }
+  float x_tilt = result.z_axis;
+  float y_tilt = result.y_axis;
 
-  //printf("Tilt: %f, %f, %f\n", tilt_array[0], tilt_array[1], tilt_array[2]);
+  float x_tolerance = 20.0;
+  float y_tolerance = 15.0;
+
+  // x needs to be incremental
+  if (x_tilt > x_tolerance) {
+    arm = arm + 0.7;
+    if (arm > 180.0) {
+      arm = 180.0;
+    }
+    set_mg996r_angle(0,arm);
+    return;
+  } else if (x_tilt < -x_tolerance) {
+    arm = arm - 0.7;
+    if (arm < 50.0) {
+      arm = 50.0;
+    }
+    set_mg996r_angle(0,arm);
+    return;
+  }
+  
+  // y needs to be incremental
+  if (y_tilt > y_tolerance) {
+    base = base - 1.0;
+  } else if (y_tilt < -y_tolerance) {
+    base = base + 1.0;
+  }
+  // set limits for the base
+  if (base > 180.0) {
+    base = 180.0;
+  } else if (base < 0.0) {
+    base = 0.0;
+  }
+  //float angle_y = y_tilt + 90.0;
+  set_mg996r_angle(1,base);
+
+  // printf("Tilt: %f, %f, %f\n", tilt_array[0], tilt_array[1], tilt_array[2]);
   //printf("Phi: %f\n", phi);
   //printf("Accelerometer: %x, %x, %x\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
 
-
+  /*
   float angle = (float)(state*45);
   printf("Angle: %f\n", angle);
 
@@ -186,6 +242,7 @@ void temp_timer_callback(void * p_context) {
   set_ds3218_angle(1,angle);
 
   state += direction;
+  */
 }
 
 lsm303agr_measurement_t lsm303agr_read_accelerometer(void) {

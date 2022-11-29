@@ -39,8 +39,7 @@ int main(void) {
 
   app_timer_init();
   app_timer_create(&lab5_timer, APP_TIMER_MODE_REPEATED, temp_timer_callback);
-  app_timer_start(lab5_timer, APP_TIMER_TICKS(2000), NULL);
-
+  app_timer_start(lab5_timer, APP_TIMER_TICKS(10), NULL);
 
   // Loop forever
   while (1) {
