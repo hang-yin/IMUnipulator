@@ -6,14 +6,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
-
 #include "nrf_delay.h"
 #include "nrf_twi_mngr.h"
-
 #include "microbit_v2.h"
 #include "lsm303agr.h"
-
 #include "app_timer.h"
+#include "nrfx_gpiote.h"
 
 // Global variables
 NRF_TWI_MNGR_DEF(twi_mngr_instance, 1, 0);
@@ -36,8 +34,9 @@ int main(void) {
   lsm303agr_init(&twi_mngr_instance);
 
   //TODO: implement me!
-
+  nrfx_gpiote_init();
   app_timer_init();
+  capacitive_touch_init();
   app_timer_create(&lab5_timer, APP_TIMER_MODE_REPEATED, temp_timer_callback);
   app_timer_start(lab5_timer, APP_TIMER_TICKS(10), NULL);
 
