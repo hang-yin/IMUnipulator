@@ -13,10 +13,14 @@
 #include "nrfx_saadc.h"
 #include "app_timer.h"
 #include "microbit_v2.h"
+#include "nrfx_timer.h"
 
-#define CAPACITIVE EDGE_P16
+#define CAPACITIVE1 EDGE_P16
+#define CAPACITIVE2 EDGE_P15
+#define MAGNET EDGE_P14
 
 // Pointer to an initialized I2C instance to use for transactions
+static bool touch_active = false;
 static const nrf_twi_mngr_t* i2c_manager = NULL;
 int8_t state = 0;
 int8_t direction = 1;
@@ -58,22 +62,6 @@ static void i2c_reg_write(uint8_t i2c_addr, uint8_t reg_addr, uint8_t data) {
 // i2c - pointer to already initialized and enabled twim instance
 void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   i2c_manager = i2c;
-  /*
-  // ---Initialize Accelerometer---
-
-  // Reboot acclerometer
-  i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_CTRL_REG5, 0x80);
-  nrf_delay_ms(100); // needs delay to wait for reboot
-
-  // Enable Block Data Update
-  // Only updates sensor data when both halves of the data has been read
-  i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_CTRL_REG4, 0x80);
-
-  // Configure accelerometer at 100Hz, normal mode (10-bit)
-  // Enable x, y and z axes
-  i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_CTRL_REG1, 0x57);
-  */
-
   // Read WHO AM I register
   // Always returns the same value if working
   uint8_t result = i2c_reg_read(ICM20948_ADDRESS, ICM20948_WHO_AM_I);
@@ -94,32 +82,11 @@ void lsm303agr_init(const nrf_twi_mngr_t* i2c) {
   set_pca9685_pwm_freq(50);
 
   // gpio init
-  nrf_gpio_pin_dir_set(CAPACITIVE, NRF_GPIO_PIN_DIR_INPUT);
-  
+  nrf_gpio_pin_dir_set(CAPACITIVE1, NRF_GPIO_PIN_DIR_INPUT);
+  nrf_gpio_pin_dir_set(MAGNET, NRF_GPIO_PIN_DIR_OUTPUT);
 
-  // ---Initialize Magnetometer---
+  // Set up capacitive touch
 
-  /*
-  // Reboot magnetometer
-  i2c_reg_write(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_CFG_REG_A, 0x40);
-  nrf_delay_ms(100); // needs delay to wait for reboot
-
-  // Enable Block Data Update
-  // Only updates sensor data when both halves of the data has been read
-  i2c_reg_write(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_CFG_REG_C, 0x10);
-
-  // Configure magnetometer at 100Hz, continuous mode
-  i2c_reg_write(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_CFG_REG_A, 0x0C);
-  
-  // Read WHO AM I register
-  result = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_WHO_AM_I_REG);
-  //TODO: check the result of the Magnetometer WHO AM I register
-  printf("Magnetometer WHO AM I: %x\n", result);
-  */
-  // ---Initialize Temperature---
-
-  // Enable temperature sensor
-  // i2c_reg_write(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_TEMP_CFG_REG, 0xC0);
 }
 
 // Read accelerometer data from ICM20948
@@ -178,8 +145,14 @@ void temp_timer_callback(void * p_context) {
   lsm303agr_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
   //printf("Tilt: %f degrees, %f degrees, %f degrees\n", result.x_axis, result.y_axis, result.z_axis);
   // printf("Capacitive: %ld\n", nrf_gpio_pin_read(CAPACITIVE));
-  uint16_t capacitive = nrf_gpio_pin_read(CAPACITIVE);
-  if (capacitive == 1) {
+  uint16_t capacitive1 = nrf_gpio_pin_read(CAPACITIVE1);
+  uint16_t capacitive2 = nrf_gpio_pin_read(CAPACITIVE2);
+  if (capacitive2 == 0) {
+    nrf_gpio_pin_write(MAGNET, 1);
+  } else {
+    nrf_gpio_pin_write(MAGNET, 0);
+  }
+  if (capacitive1 == 1) {
     arm = 90.0;
     base = 90.0;
     set_mg996r_angle(0,arm);
