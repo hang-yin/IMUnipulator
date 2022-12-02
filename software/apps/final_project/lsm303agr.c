@@ -27,6 +27,50 @@ int8_t direction = 1;
 float base = 90.0;
 float arm = 90.0;
 
+bool led_states[5][5] = {false};
+uint32_t row_displayed = 0;
+
+uint32_t row_leds[] = {LED_ROW1, LED_ROW2, LED_ROW3, LED_ROW4, LED_ROW5};
+uint32_t col_leds[] = {LED_COL1, LED_COL2, LED_COL3, LED_COL4, LED_COL5};
+
+static void led_matrix_timer_handler(void* _unused) {
+  // turn off all rows
+  for (int i = 0; i < 5; i++) {
+      nrf_gpio_pin_clear(row_leds[i]);
+  }
+  // turn off all columns
+  for (int i = 0; i < 5; i++) {
+      nrf_gpio_pin_clear(col_leds[i]);
+  }
+  // turn on the next row
+  nrf_gpio_pin_set(row_leds[row_displayed]);
+  // turn on the columns that should be on
+  for (int i = 0; i < 5; i++) {
+      if (!led_states[row_displayed][i]) {
+          nrf_gpio_pin_set(col_leds[i]);
+      }
+  }
+  row_displayed = (row_displayed + 1) % 5;
+}
+
+void led_matrix_init(void) {
+ for (int i = 0; i < 5; i++) {
+   nrf_gpio_pin_dir_set(row_leds[i], NRF_GPIO_PIN_DIR_OUTPUT);
+   nrf_gpio_pin_clear(row_leds[i]);
+ }
+ for (int i = 0; i < 5; i++) {
+   nrf_gpio_pin_dir_set(col_leds[i], NRF_GPIO_PIN_DIR_OUTPUT);
+   nrf_gpio_pin_clear(col_leds[i]);
+ }
+ APP_TIMER_DEF(my_timer_1);
+ APP_TIMER_DEF(my_timer_2);
+ app_timer_create(&my_timer_1, APP_TIMER_MODE_REPEATED, led_matrix_timer_handler);
+ app_timer_create(&my_timer_2, APP_TIMER_MODE_REPEATED, led_matrix_timer_handler);
+ app_timer_start(my_timer_1, 32768/1000, NULL); // 32768
+ app_timer_start(my_timer_2, 32768, NULL);
+}
+
+
 // Capacitive Touch setup
 APP_TIMER_DEF(capacitive_touch_timer);
 static nrfx_timer_t TIMER4 = NRFX_TIMER_INSTANCE(0);
@@ -202,14 +246,17 @@ float lsm303agr_read_temperature(void) {
 
 // timer callback for printing temperature
 void temp_timer_callback(void * p_context) {
-  /*
-  if (touch_active) {
-    printf("Touched!\n");
-  } else {
-    printf("Not touched!\n");
+
+  for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < 5; j++) {
+      if (i==sensitivity_state){
+        led_states[i][j] = true;
+      }
+      else {
+        led_states[i][j] = false;
+      }
+    }
   }
-  */
-  printf("Sensitivity state: %d\n", sensitivity_state);
 
   // Accelerometer code
   lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
@@ -235,8 +282,8 @@ void temp_timer_callback(void * p_context) {
   float x_tilt = result.z_axis;
   float y_tilt = result.y_axis;
 
-  float x_tolerance = 20.0;
-  float y_tolerance = 15.0;
+  float x_tolerance = 10.0 + 10.0*sensitivity_state;
+  float y_tolerance = 5.0 + 10.0*sensitivity_state;
 
   // x needs to be incremental
   if (x_tilt > x_tolerance) {
@@ -269,26 +316,6 @@ void temp_timer_callback(void * p_context) {
   }
   //float angle_y = y_tilt + 90.0;
   set_mg996r_angle(1,base);
-
-  // printf("Tilt: %f, %f, %f\n", tilt_array[0], tilt_array[1], tilt_array[2]);
-  //printf("Phi: %f\n", phi);
-  //printf("Accelerometer: %x, %x, %x\n", acc_measurement.x_axis, acc_measurement.y_axis, acc_measurement.z_axis);
-
-  /*
-  float angle = (float)(state*45);
-  printf("Angle: %f\n", angle);
-
-  if (angle >= 180) {
-    direction = -1;
-  } else if (angle <= 0) {
-    direction = 1;
-  }
-
-  set_mg996r_angle(0,angle);
-  set_ds3218_angle(1,angle);
-
-  state += direction;
-  */
 }
 
 lsm303agr_measurement_t lsm303agr_read_accelerometer(void) {

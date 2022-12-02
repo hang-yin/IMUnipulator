@@ -37,6 +37,7 @@ int main(void) {
   nrfx_gpiote_init();
   app_timer_init();
   capacitive_touch_init();
+  led_matrix_init();
   app_timer_create(&lab5_timer, APP_TIMER_MODE_REPEATED, temp_timer_callback);
   app_timer_start(lab5_timer, APP_TIMER_TICKS(10), NULL);
 

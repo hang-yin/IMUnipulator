@@ -162,3 +162,4 @@ float linear_interpolate(float x,float x1,float y1,float x2, float y2);
 void set_mg996r_angle(uint8_t channel, float angle);
 void set_ds3218_angle(uint8_t channel, float angle);
 void capacitive_touch_init(void);
+void led_matrix_init(void);
