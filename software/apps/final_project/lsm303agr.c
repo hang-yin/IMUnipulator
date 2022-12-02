@@ -31,6 +31,8 @@ float arm = 90.0;
 APP_TIMER_DEF(capacitive_touch_timer);
 static nrfx_timer_t TIMER4 = NRFX_TIMER_INSTANCE(0);
 static bool touch_active = false;
+static bool touch_active_prev = false;
+static int16_t sensitivity_state = 0;
 
 static void disable_both(void) {
   // Disable both channels
@@ -40,6 +42,7 @@ static void disable_both(void) {
 
 // Callback function for GPIO interrupts
 static void gpio_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+  touch_active_prev = touch_active;
   touch_active = false;
   disable_both();
 }
@@ -47,7 +50,11 @@ static void gpio_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 static void timer_handler(nrf_timer_event_t event, void* context) {
   // Implement in a later step
   //printf("Timer interrupt, touched!\n");
+  touch_active_prev = touch_active;
   touch_active = true;
+  if (!touch_active_prev && touch_active) {
+    sensitivity_state = (sensitivity_state + 1) % 5;
+  }
   disable_both();
 }
 
@@ -195,11 +202,14 @@ float lsm303agr_read_temperature(void) {
 
 // timer callback for printing temperature
 void temp_timer_callback(void * p_context) {
+  /*
   if (touch_active) {
     printf("Touched!\n");
   } else {
     printf("Not touched!\n");
   }
+  */
+  printf("Sensitivity state: %d\n", sensitivity_state);
 
   // Accelerometer code
   lsm303agr_measurement_t acc_measurement = icm20948_read_accelerometer();
