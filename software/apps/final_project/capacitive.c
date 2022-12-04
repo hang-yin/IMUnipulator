@@ -10,9 +10,6 @@
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
 
-#define CAPACITIVE1 EDGE_P16
-#define CAPACITIVE2 EDGE_P15
-
 // Capacitive Touch setup
 APP_TIMER_DEF(capacitive_touch_timer);
 static nrfx_timer_t TIMER4 = NRFX_TIMER_INSTANCE(0);
@@ -22,6 +19,10 @@ static int16_t sensitivity_state = 0;
 
 bool get_touch_active(void) {
     return touch_active;
+}
+
+int16_t get_sensitivity_state(void) {
+    return sensitivity_state;
 }
 
 static void disable_both(void) {
