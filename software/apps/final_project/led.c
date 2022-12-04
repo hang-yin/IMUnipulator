@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
-#include "lsm303agr.h"
+#include "led.h"
 #include "nrf_delay.h"
 #include "nrfx_saadc.h"
 #include "app_timer.h"
