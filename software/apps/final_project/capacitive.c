@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
-#include "lsm303agr.h"
+#include "capacitive.h"
 #include "nrf_delay.h"
 #include "nrfx_saadc.h"
 #include "app_timer.h"
@@ -19,6 +19,10 @@ static nrfx_timer_t TIMER4 = NRFX_TIMER_INSTANCE(0);
 static bool touch_active = false;
 static bool touch_active_prev = false;
 static int16_t sensitivity_state = 0;
+
+bool get_touch_active(void) {
+    return touch_active;
+}
 
 static void disable_both(void) {
   // Disable both channels
