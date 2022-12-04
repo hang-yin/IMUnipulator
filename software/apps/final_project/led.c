@@ -10,11 +10,19 @@
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
 
-bool led_states[5][5] = {false};
-uint32_t row_displayed = 0;
+static bool led_states[5][5] = {false};
+static uint32_t row_displayed = 0;
 
-uint32_t row_leds[] = {LED_ROW1, LED_ROW2, LED_ROW3, LED_ROW4, LED_ROW5};
-uint32_t col_leds[] = {LED_COL1, LED_COL2, LED_COL3, LED_COL4, LED_COL5};
+static uint32_t row_leds[] = {LED_ROW1, LED_ROW2, LED_ROW3, LED_ROW4, LED_ROW5};
+static uint32_t col_leds[] = {LED_COL1, LED_COL2, LED_COL3, LED_COL4, LED_COL5};
+
+void set_led_states(bool states[5][5]) {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            led_states[i][j] = states[i][j];
+        }
+    }
+}
 
 static void led_matrix_timer_handler(void* _unused) {
   // turn off all rows
