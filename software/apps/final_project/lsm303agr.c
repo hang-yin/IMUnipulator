@@ -232,18 +232,6 @@ int16_t combine_bytes(uint8_t lsb, uint8_t msb) {
   return (uint16_t)lsb | ((uint16_t)msb << 8);
 }
 
-// Read the internal temperature sensor
-//
-// Return measurement as floating point value in degrees C
-float lsm303agr_read_temperature(void) {
-  //TODO: implement me
-  uint8_t temp_l = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_TEMP_L);
-  uint8_t temp_h = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_TEMP_H);
-  int16_t temp = (temp_h << 8) | temp_l;
-  return (float)temp / 256.0 + 25.0;
-  //return 0.0;
-}
-
 // timer callback for printing temperature
 void temp_timer_callback(void * p_context) {
 
@@ -316,67 +304,6 @@ void temp_timer_callback(void * p_context) {
   }
   //float angle_y = y_tilt + 90.0;
   set_mg996r_angle(1,base);
-}
-
-lsm303agr_measurement_t lsm303agr_read_accelerometer(void) {
-  //TODO: implement me
-  uint8_t x_l = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_X_L);
-  //printf("x_l: %x\n", x_l);
-  uint8_t x_h = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_X_H);
-  //printf("x_h: %x\n", x_h);
-  uint8_t y_l = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_Y_L);
-  uint8_t y_h = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_Y_H);
-  uint8_t z_l = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_Z_L);
-  uint8_t z_h = i2c_reg_read(LSM303AGR_ACC_ADDRESS, LSM303AGR_ACC_OUT_Z_H);
-  uint16_t x = ((uint16_t)x_h << 8) | x_l;
-  uint16_t y = ((uint16_t)y_h << 8) | y_l;
-  uint16_t z = ((uint16_t)z_h << 8) | z_l;
-  int16_t x_16 = (int16_t)x;
-  int16_t y_16 = (int16_t)y;
-  int16_t z_16 = (int16_t)z;
-  //printf("x: %x\n", x);
-  //printf("y: %x\n", y);
-  //printf("z: %x\n", z);
-  int16_t x_shifted = x_16 >> 6;
-  int16_t y_shifted = y_16 >> 6;
-  int16_t z_shifted = z_16 >> 6;
-  //printf("x_shifted: %d\n", x_shifted);
-  //printf("y_shifted: %d\n", y_shifted);
-  //printf("z_shifted: %d\n", z_shifted);
-  int16_t x_scaled = x_shifted * 3.9;//0.244;
-  int16_t y_scaled = y_shifted * 3.9;//0.244;
-  int16_t z_scaled = z_shifted * 3.9;//0.244;
-  //printf("x_scaled in terms of mg/LSB: %d\n", x_scaled);
-  float x_in_g = x_scaled / 1000.0;
-  float y_in_g = y_scaled / 1000.0;
-  float z_in_g = z_scaled / 1000.0;
-  lsm303agr_measurement_t result = {x_in_g, y_in_g, z_in_g};
-  return result;
-}
-
-lsm303agr_measurement_t lsm303agr_read_magnetometer(void) {
-  //TODO: implement me
-  uint8_t x_l = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_X_L_REG);
-  uint8_t x_h = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_X_H_REG);
-  uint8_t y_l = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_Y_L_REG);
-  uint8_t y_h = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_Y_H_REG);
-  uint8_t z_l = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_Z_L_REG);
-  uint8_t z_h = i2c_reg_read(LSM303AGR_MAG_ADDRESS, LSM303AGR_MAG_OUT_Z_H_REG);
-  uint16_t x = (x_h << 8) | x_l;
-  uint16_t y = (y_h << 8) | y_l;
-  uint16_t z = (z_h << 8) | z_l;
-  int16_t x_16 = (int16_t)x;
-  int16_t y_16 = (int16_t)y;
-  int16_t z_16 = (int16_t)z;
-  int16_t x_scaled = x_16 * 1.5;
-  int16_t y_scaled = y_16 * 1.5;
-  int16_t z_scaled = z_16 * 1.5;
-  float x_in_gauss = x_scaled / 1000.0;
-  float y_in_gauss = y_scaled / 1000.0;
-  float z_in_gauss = z_scaled / 1000.0;
-  lsm303agr_measurement_t result = {x_in_gauss, y_in_gauss, z_in_gauss};
-
-  return result;
 }
 
 // define a function for converting accelerometer data to tilt angles
