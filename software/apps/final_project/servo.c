@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
-#include "lsm303agr.h"
+#include "servo.h"
 #include "nrf_delay.h"
 #include "nrfx_saadc.h"
 #include "app_timer.h"
@@ -28,7 +28,7 @@ void set_pca9685_pwm_freq(uint16_t freq) {
   i2c_reg_write(PCA9685_ADDRESS, PCA_MODE2, 0x04);
 }
 
-void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
+static void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
   on = on & 0x0FFF;
   off = off & 0x0FFF;
   i2c_reg_write(PCA9685_ADDRESS, LED0_ON_L + 4 * channel, off & 0xff);
@@ -37,7 +37,7 @@ void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
   i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_H + 4 * channel, on >> 8);
 }
 
-void set_duty_cycle(uint8_t channel, float duty_cycle) {
+static void set_duty_cycle(uint8_t channel, float duty_cycle) {
   uint16_t on = (uint16_t)(4095.0 * duty_cycle);
   // printf("on: %d\n", on);
   uint16_t off = 4095 - on;
@@ -45,7 +45,7 @@ void set_duty_cycle(uint8_t channel, float duty_cycle) {
   set_pca9685_pwm(channel, on, off);
 }
 
-float linear_interpolate(float x,float x1,float y1,float x2, float y2) {
+static float linear_interpolate(float x,float x1,float y1,float x2, float y2) {
   return y1 + (x - x1)*(y2 - y1) / (x2 - x1);
 }
 
