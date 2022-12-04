@@ -10,6 +10,12 @@
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
 
+// Helper function to perform a 1-byte I2C read of a given register
+//
+// i2c_addr - address of the device to read from
+// reg_addr - address of the register within the device to read
+//
+// returns 8-bit read value
 uint8_t i2c_reg_read(uint8_t i2c_addr, uint8_t reg_addr) {
   uint8_t rx_buf = 0;
   nrf_twi_mngr_transfer_t const read_transfer[] = {
