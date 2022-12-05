@@ -39,7 +39,7 @@ static void gpio_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
 static void timer_handler(nrf_timer_event_t event, void* context) {
   // Implement in a later step
-  printf("Timer interrupt, touched!\n");
+  // printf("Timer interrupt, touched!\n");
   touch_active_prev = touch_active;
   touch_active = true;
   if (!touch_active_prev && touch_active) {
