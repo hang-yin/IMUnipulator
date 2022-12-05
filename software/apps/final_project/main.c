@@ -23,7 +23,8 @@ APP_TIMER_DEF(main_timer);
 // timer callback for printing temperature
 void timer_callback(void * p_context) {
   int16_t sensitivity_state = get_sensitivity_state();
-  set_led_row(sensitivity_state, true);
+  printf("Sensitivity state: %d\n", sensitivity_state);
+  set_led_row(sensitivity_state);
 
   icm20948_measurement_t acc_measurement = icm20948_read_accelerometer(i2c_manager);
   icm20948_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
@@ -105,7 +106,7 @@ int main(void) {
   printf("here5\n");
   led_matrix_init();
   printf("here6\n");
-  app_timer_init();
+  // app_timer_init();
   printf("here7\n");
   app_timer_create(&main_timer, APP_TIMER_MODE_REPEATED, timer_callback);
   app_timer_start(main_timer, APP_TIMER_TICKS(10), NULL);
