@@ -8,7 +8,7 @@ typedef struct {
   float z_axis;
 } icm20948_measurement_t;
 
-icm20948_measurement_t icm20948_read_accelerometer(void);
+icm20948_measurement_t icm20948_read_accelerometer(const nrf_twi_mngr_t* i2c);
 icm20948_measurement_t convert_accelerometer_to_tilt_angles(icm20948_measurement_t acc_measurement);
 
 static const uint8_t ICM20948_ADDRESS = 0x69;

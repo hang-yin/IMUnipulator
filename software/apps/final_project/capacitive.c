@@ -4,7 +4,6 @@
 #include <math.h>
 #include "capacitive.h"
 #include "nrf_delay.h"
-#include "nrfx_saadc.h"
 #include "app_timer.h"
 #include "microbit_v2.h"
 #include "nrfx_timer.h"

@@ -10,14 +10,11 @@
 #include "servo.h"
 #include "led.h"
 #include "imu.h"
-#include "i2c.h"
 #include "capacitive.h"
 
 // Define local variables
 #define CAPACITIVE1 EDGE_P16
 static const nrf_twi_mngr_t* i2c_manager = NULL;
-static int8_t state = 0;
-static int8_t direction = 1;
 static float base = 90.0;
 static float arm = 90.0;
 NRF_TWI_MNGR_DEF(twi_mngr_instance, 1, 0);
@@ -26,20 +23,9 @@ APP_TIMER_DEF(main_timer);
 // timer callback for printing temperature
 void timer_callback(void * p_context) {
   int16_t sensitivity_state = get_sensitivity_state();
-  bool led_states[5][5] = {false};
-  for (int i = 0; i < 5; i++) {
-    for (int j = 0; j < 5; j++) {
-      if (i == sensitivity_state){
-        led_states[i][j] = true;
-      }
-      else {
-        led_states[i][j] = false;
-      }
-    }
-  }
-  set_led_states(led_states);
+  set_led_row(sensitivity_state, true);
 
-  icm20948_measurement_t acc_measurement = icm20948_read_accelerometer();
+  icm20948_measurement_t acc_measurement = icm20948_read_accelerometer(i2c_manager);
   icm20948_measurement_t result = convert_accelerometer_to_tilt_angles(acc_measurement);
 
   uint16_t capacitive1 = nrf_gpio_pin_read(CAPACITIVE1);
@@ -101,19 +87,26 @@ int main(void) {
   i2c_manager = &twi_mngr_instance;
   // Read WHO AM I register
   // Always returns the same value if working
-  uint8_t result = i2c_reg_read(ICM20948_ADDRESS, ICM20948_WHO_AM_I);
+  uint8_t result = i2c_reg_read(ICM20948_ADDRESS, ICM20948_WHO_AM_I, i2c_manager);
   // Check the result of the Accelerometer WHO AM I register
   printf("ICM20948 WHO AM I: %x\n", result);
-  i2c_reg_write(ICM20948_ADDRESS, PWR_MGMT_1, 0x01);
+  i2c_reg_write(ICM20948_ADDRESS, PWR_MGMT_1, 0x01, i2c_manager);
   nrf_delay_ms(100);
+  printf("here1\n");
   // Set PWM frequency to 50Hz
-  set_pca9685_pwm_freq(50);
+  set_pca9685_pwm_freq(50, i2c_manager);
+  printf("here2\n");
   // gpio init
   nrfx_gpiote_init();
+  printf("here3\n");
   nrf_gpio_pin_dir_set(CAPACITIVE1, NRF_GPIO_PIN_DIR_INPUT);
+  printf("here4\n");
   capacitive_touch_init();
+  printf("here5\n");
   led_matrix_init();
+  printf("here6\n");
   app_timer_init();
+  printf("here7\n");
   app_timer_create(&main_timer, APP_TIMER_MODE_REPEATED, timer_callback);
   app_timer_start(main_timer, APP_TIMER_TICKS(10), NULL);
 

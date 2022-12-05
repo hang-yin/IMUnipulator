@@ -4,37 +4,40 @@
 #include <math.h>
 #include "servo.h"
 #include "nrf_delay.h"
-#include "nrfx_saadc.h"
 #include "app_timer.h"
 #include "microbit_v2.h"
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
+#include "i2c.h"
 
-void set_pca9685_pwm_freq(uint16_t freq) {
+static const nrf_twi_mngr_t* i2c_manager = NULL;
+
+void set_pca9685_pwm_freq(uint16_t freq, const nrf_twi_mngr_t* i2c) {
+  i2c_manager = i2c;
   uint16_t prescale = (25000000 / (4096 * freq)) - 1;
   // uint8_t old_mode = i2c_reg_read(PCA9685_ADDRESS, PCA9685_MODE1);
   // uint8_t new_mode = (old_mode & 0x7F) | 0x10;
 
-  uint8_t mode1 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE1);
+  uint8_t mode1 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE1, i2c_manager);
   // print old_mode
   printf("mode1: %x\n", mode1);
-  uint8_t mode2 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE2);
+  uint8_t mode2 = i2c_reg_read(PCA9685_ADDRESS, PCA_MODE2, i2c_manager);
   // print old_mode2
   printf("mode2: %x\n", mode2);
 
-  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x10);
-  i2c_reg_write(PCA9685_ADDRESS, PCA_PRESCALE, prescale);
-  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x80);
-  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE2, 0x04);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x10, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_PRESCALE, prescale, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE1, 0x80, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, PCA_MODE2, 0x04, i2c_manager);
 }
 
 static void set_pca9685_pwm(uint8_t channel, uint16_t on, uint16_t off) {
   on = on & 0x0FFF;
   off = off & 0x0FFF;
-  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_L + 4 * channel, off & 0xff);
-  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_H + 4 * channel, off >> 8);
-  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_L + 4 * channel, on & 0xff);
-  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_H + 4 * channel, on >> 8);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_L + 4 * channel, off & 0xff, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_ON_H + 4 * channel, off >> 8, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_L + 4 * channel, on & 0xff, i2c_manager);
+  i2c_reg_write(PCA9685_ADDRESS, LED0_OFF_H + 4 * channel, on >> 8, i2c_manager);
 }
 
 static void set_duty_cycle(uint8_t channel, float duty_cycle) {

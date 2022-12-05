@@ -26,6 +26,6 @@ typedef enum {
     PCA_ALL_LED_OFF_H = 0xFD,
 } pca9685_reg_t;
 
-void set_pca9685_pwm_freq(uint16_t freq);
+void set_pca9685_pwm_freq(uint16_t freq, const nrf_twi_mngr_t* i2c);
 void set_mg996r_angle(uint8_t channel, float angle);
 void set_ds3218_angle(uint8_t channel, float angle);

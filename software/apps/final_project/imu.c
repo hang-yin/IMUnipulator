@@ -4,30 +4,31 @@
 #include <math.h>
 #include "imu.h"
 #include "nrf_delay.h"
-#include "nrfx_saadc.h"
 #include "app_timer.h"
 #include "microbit_v2.h"
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
+#include "i2c.h"
 
 static int16_t combine_bytes(uint8_t lsb, uint8_t msb) {
   return (uint16_t)lsb | ((uint16_t)msb << 8);
 }
 
 // Read accelerometer data from ICM20948
-icm20948_measurement_t icm20948_read_accelerometer(void) {
+icm20948_measurement_t icm20948_read_accelerometer(const nrf_twi_mngr_t* i2c) {
+  const nrf_twi_mngr_t* i2c_manager = i2c;
   const float scaling_factor = 0.00006103515625; // 1/2^14
 
-  uint16_t lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_L);
-  uint16_t msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_H);
+  uint16_t lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_L, i2c_manager);
+  uint16_t msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_XOUT_H, i2c_manager);
   float x = scaling_factor*(float)(combine_bytes(lsb,msb));
 
-  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_L);
-  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_H);
+  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_L, i2c_manager);
+  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_YOUT_H, i2c_manager);
   float y = scaling_factor*(float)(combine_bytes(lsb,msb));
 
-  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_L);
-  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_H);
+  lsb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_L, i2c_manager);
+  msb = (uint16_t)i2c_reg_read(ICM20948_ADDRESS, ACCEL_ZOUT_H, i2c_manager);
   float z = scaling_factor*(float)(combine_bytes(lsb,msb));
 
   icm20948_measurement_t measurement = {
