@@ -39,7 +39,7 @@ static void gpio_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
 static void timer_handler(nrf_timer_event_t event, void* context) {
   // Implement in a later step
-  // printf("Timer interrupt, touched!\n");
+  printf("Timer interrupt, touched!\n");
   touch_active_prev = touch_active;
   touch_active = true;
   if (!touch_active_prev && touch_active) {
@@ -55,7 +55,7 @@ static void start_capacitive_test(void* context) {
   nrf_gpio_pin_clear(TOUCH_LOGO);
   nrfx_timer_clear(&TIMER4);
   nrfx_timer_resume(&TIMER4);
-  nrfx_timer_compare(&TIMER4, NRF_TIMER_CC_CHANNEL1, 800, true);
+  nrfx_timer_compare(&TIMER4, NRF_TIMER_CC_CHANNEL1, 1500, true);
   nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_LOTOHI(true); // high-accuracy mode
   nrfx_gpiote_in_init(TOUCH_LOGO, &in_config, gpio_handler);
   nrfx_gpiote_in_event_enable(TOUCH_LOGO, true); // enable interrupts

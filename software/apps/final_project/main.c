@@ -23,7 +23,7 @@ APP_TIMER_DEF(main_timer);
 // timer callback for printing temperature
 void timer_callback(void * p_context) {
   int16_t sensitivity_state = get_sensitivity_state();
-  printf("Sensitivity state: %d\n", sensitivity_state);
+  // printf("Sensitivity state: %d\n", sensitivity_state);
   set_led_row(sensitivity_state);
 
   icm20948_measurement_t acc_measurement = icm20948_read_accelerometer(i2c_manager);
@@ -40,18 +40,20 @@ void timer_callback(void * p_context) {
 
   float x_tilt = result.z_axis;
   float y_tilt = result.y_axis;
-  float x_tolerance = 10.0 + 10.0*sensitivity_state;
-  float y_tolerance = 5.0 + 10.0*sensitivity_state;
+  float x_tolerance = 15.0;
+  float y_tolerance = 15.0;
+  float x_speed = 0.1 + 0.1 * sensitivity_state; // set 0.3 to middle
+  float y_speed = 0.4 + 0.1 * sensitivity_state; // set 0.6 to middle
 
   if (x_tilt > x_tolerance) {
-    arm = arm + 0.7;
+    arm = arm + x_speed;
     if (arm > 180.0) {
       arm = 180.0;
     }
     set_mg996r_angle(0,arm);
     return;
   } else if (x_tilt < -x_tolerance) {
-    arm = arm - 0.7;
+    arm = arm - x_speed;
     if (arm < 50.0) {
       arm = 50.0;
     }
@@ -60,14 +62,14 @@ void timer_callback(void * p_context) {
   }
   
   if (y_tilt > y_tolerance) {
-    base = base - 1.0;
-    if (base < 0.0) {
-      base = 0.0;
-    }
-  } else if (y_tilt < -y_tolerance) {
-    base = base + 1.0;
+    base = base + y_speed;
     if (base > 180.0) {
       base = 180.0;
+    }
+  } else if (y_tilt < -y_tolerance) {
+    base = base - y_speed;
+    if (base < 0.0) {
+      base = 0.0;
     }
   }
   set_mg996r_angle(1,base);
