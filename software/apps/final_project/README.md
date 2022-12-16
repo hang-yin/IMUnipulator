@@ -1,5 +1,4 @@
-I2C Sensors App
-===============
+# IMUnipulator Project Code
 
-Read data from the LSM303AGR accelerometer/magnetometer over I2C.
+For a full description, see [here](../../../).
 
