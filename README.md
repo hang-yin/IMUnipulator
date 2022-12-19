@@ -11,7 +11,7 @@ The **EMGripper** team used an EMG sensor and a force sensitive resistor to cont
 [PickingUpTux](https://user-images.githubusercontent.com/113186159/208053732-0d4c12c5-b25e-4fb4-a2f9-99a4de32a25b.mp4)
 
 ## Team
-- Felipe Jannarone
+- [Felipe Jannarone](https://github.com/felipejannarone)
 - [Nick Morales](https://github.com/ngmor)
 - [Hang-Yin](https://github.com/hang-yin)
 
